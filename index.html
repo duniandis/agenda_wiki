@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="id">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width,initial-scale=1" name="viewport"/>
+  <meta content="#163b35" name="theme-color"/>
+  <title>
+   AGENDA PT. WIKI
+  </title>
+  <!--
+  ================================================================
+  PENGATURAN AGENDA — EDIT BAGIAN INI UNTUK AGENDA / FIREBASE LAIN
+  ================================================================
+  1. Ganti namaAgenda dan namaInstansi sesuai kebutuhan.
+  2. Salin SELURUH firebaseConfig aplikasi Web dari Firebase Console
+     ke objek firebase di bawah (apiKey, projectId, dan lainnya).
+     Jika berpindah proyek, jangan hanya mengganti apiKey.
+  3. Ganti nama koleksi masuk / keluar sesuai database tujuan.
+  4. Unggah ulang index.html ke GitHub Pages.
+
+  Konfigurasi hanya dibaca dari kode ini. Tidak ada penggantian
+  koneksi melalui tampilan atau konfigurasi browser versi lama.
+  Firebase Rules tetap menentukan siapa yang boleh mengakses data.
+  Jangan menaruh service account, private key, atau token admin.
+  ================================================================
+-->
+  <script>
+    const AGENDA_CONFIG = {
+      namaAgenda: "Buku Surat",
+      namaInstansi: "PT WIKI",
+      firebase: {
+        "apiKey": "AIzaSyAe8ZpB9ouIPNS4mNf51_MDAZl-tZU2BcY",
+        "projectId": "data-surat",
+        "authDomain": "data-surat.firebasestorage.app",
+        "storageBucket": "data-surat.firebasestorage.app",
+        "messagingSenderId": "48821666983"
+      },
+      koleksi: {
+        masuk: "surat_masuk",
+        keluar: "surat_keluar"
+      }
+    };
+  </script>
+  <!-- TAMPILAN: warna, ukuran, dan tata letak -->
+  <style>
+    :root {
+      --ink: #17352f;
+      --green: #1d6656;
+      --line: #dce5e0;
+      --muted: #64776e
+    }
+    
+    * {
+      box-sizing: border-box
+    }
+    
+    body {
+      margin: 0;
+      background: #f3f6f3;
+      color: var(--ink);
+      font: 15px/1.5 system-ui, sans-serif
+    }
+    
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit
+    }
+    
+    button {
+      cursor: pointer;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: white;
+      padding: 10px 16px;
+      color: var(--ink)
+    }
+    
+    button:hover {
+      background: #eaf2ec
+    }
+    
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed
+    }
+    
+    .primary {
+      background: var(--green);
+      border-color: var(--green);
+      color: white
+    }
+    
+    .primary:hover {
+      background: #174c41
+    }
+    
+    .danger {
+      color: #a22f2f
+    }
+    
+    header {
+      background: #163b35;
+      color: #fff;
+      padding: 24px max(20px, calc((100vw - 1240px)/2));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px
+    }
+    
+    header small {
+      color: #b9d4c8;
+      letter-spacing: 2px
+    }
+    
+    h1 {
+      font-size: 27px;
+      margin: 4px 0
+    }
+    
+    h2 {
+      margin: 0;
+      font-size: 23px
+    }
+    
+    p {
+      margin: 8px 0
+    }
+    
+    main {
+      max-width: 1280px;
+      margin: auto;
+      padding: 26px 20px
+    }
+    
+    .bar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px
+    }
+    
+    .tabs button[aria-selected=true] {
+      background: var(--green);
+      color: white;
+      border-color: var(--green)
+    }
+    
+    .card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-top: 18px
+    }
+    
+    .cardhead {
+      padding: 22px;
+      border-bottom: 1px solid var(--line)
+    }
+    
+    .muted,
+    small {
+      color: var(--muted)
+    }
+    
+    input,
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid #bbcfc2;
+      border-radius: 8px;
+      background: white;
+      padding: 10px;
+      color: var(--ink)
+    }
+    
+    input:focus,
+    textarea:focus {
+      outline: 2px solid #81baa4;
+      outline-offset: 1px
+    }
+    
+    .search {
+      max-width: 410px
+    }
+    
+    .tablewrap {
+      overflow: auto
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      font-size: 14px
+    }
+    
+    th {
+      background: #eef4ef;
+      text-align: left;
+      color: #52685b;
+      white-space: nowrap
+    }
+    
+    td,
+    th {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top
+    }
+    
+    td {
+      max-width: 260px;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap
+    }
+    
+    td.actions {
+      white-space: nowrap;
+      min-width: 165px
+    }
+    
+    td button {
+      padding: 6px 10px;
+      font-size: 13px
+    }
+    
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted)
+    }
+    
+    footer.bar {
+      padding: 16px 20px
+    }
+    
+    .badge {
+      border-radius: 30px;
+      padding: 6px 13px;
+      background: #e9f2eb;
+      font-size: 13px
+    }
+    
+    .status {
+      font-size: 13px;
+      color: #d4e8db
+    }
+    
+    #notice {
+      padding: 14px 18px;
+      border-radius: 10px;
+      background: #fff4d8;
+      border: 1px solid #e9d39b;
+      margin-bottom: 16px;
+      white-space: pre-wrap
+    }
+    
+    #notice[hidden] {
+      display: none
+    }
+    
+    dialog {
+      width: min(680px, 94vw);
+      max-height: 90vh;
+      overflow: auto;
+      border: 0;
+      border-radius: 15px;
+      padding: 26px;
+      color: var(--ink);
+      box-shadow: 0 20px 80px #0003
+    }
+    
+    dialog::backdrop {
+      background: #0b251db3
+    }
+    
+    form .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 20px 0
+    }
+    
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 13px
+    }
+    
+    label input,
+    label textarea {
+      margin-top: 6px;
+      font-weight: 400
+    }
+    
+    .wide {
+      grid-column: 1/-1
+    }
+    
+    .dialogbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px
+    }
+    
+    #detail p {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere
+    }
+    
+    #detail dt {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 15px
+    }
+    
+    #detail dd {
+      margin: 2px 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere
+    }
+    
+    #toast {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #163b35;
+      color: white;
+      border-radius: 10px;
+      padding: 12px 20px;
+      z-index: 10;
+      max-width: 90vw
+    }
+    
+    #toast[hidden],
+    #toast:empty {
+      display: none
+    }
+    
+    @media(max-width:600px) {
+      header {
+        padding: 20px;
+        align-items: flex-start
+      }
+    
+      h1 {
+        font-size: 22px
+      }
+    
+      header button {
+        padding: 8px 10px
+      }
+    
+      main {
+        padding: 20px 12px
+      }
+    
+      form .grid {
+        grid-template-columns: 1fr
+      }
+    
+      .wide {
+        grid-column: auto
+      }
+    
+      .cardhead {
+        padding: 16px
+      }
+    
+      .search {
+        max-width: none
+      }
+    
+      .bar>div {
+        flex-wrap: wrap
+      }
+    
+      dialog {
+        padding: 20px
+      }
+    }
+    
+    @media print {
+    
+      header button,
+      .tabs,
+      .controls,
+      .actions,
+      footer,
+      #notice,
+      #toast {
+        display: none !important
+      }
+    
+      header {
+        background: white;
+        color: black;
+        padding: 0
+      }
+    
+      main {
+        padding: 0
+      }
+    
+      .tablewrap {
+        overflow: visible
+      }
+    
+      table {
+        min-width: 0;
+        font-size: 10px
+      }
+    
+      td,
+      th {
+        padding: 6px
+      }
+    
+      .card {
+        border: 0
+      }
+    
+      body {
+        background: white
+      }
+    }
+  </style>
+ </head>
+ <body>
+  <header>
+   <div>
+    <small id="instansi">
+     AGENDA PT. WIKI
+    </small>
+    <h1 id="namaagenda">
+     Buku Surat
+    </h1>
+    <div class="status" id="status" role="status">
+     Menyiapkan koneksi…
+    </div>
+   </div>
+  </header>
+  <main>
+   <div hidden="" id="notice" role="alert">
+   </div>
+   <nav aria-label="Jenis surat" class="tabs">
+    <button aria-selected="true" data-kind="keluar">
+     ↗ Surat Keluar
+    </button>
+    <button aria-selected="false" data-kind="masuk">
+     ↙ Surat Masuk
+    </button>
+   </nav>
+   <div class="bar">
+    <div>
+     <h2 id="title">
+      Agenda Surat Keluar
+     </h2>
+     <p class="muted">
+      Kelola arsip surat yang terhubung dengan aplikasi Android.
+     </p>
+    </div>
+    <button class="primary" disabled="" id="add">
+     + Tambah surat
+    </button>
+   </div>
+   <section class="card">
+    <div class="cardhead bar controls">
+     <input aria-label="Cari surat" class="search" id="search" placeholder="Cari nomor, penerima, perihal, pengirim…"/>
+     <div style="display:flex;gap:8px;align-items:center">
+      <span class="badge" id="count">
+       0 surat
+      </span>
+      <button disabled="" id="csv">
+       Unduh CSV
+      </button>
+      <button id="print">
+       Cetak
+      </button>
+     </div>
+    </div>
+    <div class="tablewrap">
+     <table>
+      <thead>
+       <tr>
+        <th>
+         No. Berkas
+        </th>
+        <th>
+         Tanggal
+        </th>
+        <th>
+         Alamat Penerima
+        </th>
+        <th>
+         Perihal
+        </th>
+        <th>
+         Pengirim
+        </th>
+        <th>
+         Keterangan
+        </th>
+        <th>
+         Waktu Input
+        </th>
+        <th class="actions">
+         Tindakan
+        </th>
+       </tr>
+      </thead>
+      <tbody id="rows">
+      </tbody>
+     </table>
+     <div class="empty" id="empty">
+      Menghubungkan ke database…
+     </div>
+    </div>
+    <footer class="bar">
+     <small id="summary">
+      Menunggu data
+     </small>
+     <div style="display:flex;gap:10px;align-items:center">
+      <button aria-label="Halaman sebelumnya" id="prev">
+       ←
+      </button>
+      <small id="page">
+       1 / 1
+      </small>
+      <button aria-label="Halaman berikutnya" id="next">
+       →
+      </button>
+     </div>
+    </footer>
+   </section>
+   <p class="muted" style="font-size:12px;margin-top:14px">
+    Perubahan disimpan langsung ke database bersama. Pastikan isi surat sebelum menyimpan.
+   </p>
+  </main>
+  <dialog id="editor">
+   <form id="form">
+    <h2 id="formtitle">
+     Tambah surat
+    </h2>
+    <small>
+     Semua kolom wajib diisi, sama seperti aplikasi Android.
+    </small>
+    <div class="grid">
+     <label>
+      Nomor Berkas
+      <input maxlength="200" name="nomorBerkas" required=""/>
+     </label>
+     <label>
+      Tanggal
+      <input name="tanggal" required="" type="date"/>
+     </label>
+     <label class="wide">
+      Alamat Penerima
+      <input list="addresses" maxlength="5000" name="alamatPenerima" required=""/>
+     </label>
+     <datalist id="addresses">
+     </datalist>
+     <label class="wide">
+      Perihal
+      <textarea maxlength="10000" name="perihal" required="" rows="2"></textarea>
+     </label>
+     <label class="wide">
+      Pengirim
+      <input maxlength="5000" name="pengirim" required=""/>
+     </label>
+     <label class="wide">
+      Keterangan
+      <textarea maxlength="10000" name="keterangan" required="" rows="3"></textarea>
+     </label>
+    </div>
+    <p class="danger" id="formerror" role="alert">
+    </p>
+    <div class="dialogbar">
+     <button id="cancel" type="button">
+      Batal
+     </button>
+     <button class="primary" id="save">
+      Simpan surat
+     </button>
+    </div>
+   </form>
+  </dialog>
+  <dialog id="detail">
+   <h2>
+    Detail surat
+   </h2>
+   <dl id="detailbody">
+   </dl>
+   <div class="dialogbar">
+    <button data-close="detail">
+     Tutup
+    </button>
+   </div>
+  </dialog>
+  <dialog id="deletion">
+   <h2>
+    Hapus surat?
+   </h2>
+   <p id="deleteinfo">
+   </p>
+   <p class="muted">
+    Surat juga akan hilang dari aplikasi Android. Penghapusan tidak dapat dibatalkan.
+   </p>
+   <p class="danger" id="deleteerror" role="alert">
+   </p>
+   <div class="dialogbar">
+    <button data-close="deletion">
+     Batal
+    </button>
+    <button class="primary" id="confirmdelete">
+     Ya, hapus surat
+    </button>
+   </div>
+  </dialog>
+  <div id="toast" role="status" hidden></div>
+  <script type="module">
+    // 1. KONFIGURASI — sumber tunggal ada di AGENDA_CONFIG di atas.
+    const config = AGENDA_CONFIG.firebase;
+    const collectionName = type => AGENDA_CONFIG.koleksi[type];
+    const ADDRESS_STORAGE_KEY = `agenda.addresses.${config.projectId}.${AGENDA_CONFIG.koleksi.keluar}`;
+    const $ = id => document.getElementById(id);
+    document.title = `${AGENDA_CONFIG.namaAgenda} • ${AGENDA_CONFIG.namaInstansi}`;
+    $('namaagenda').textContent = AGENDA_CONFIG.namaAgenda;
+    $('instansi').textContent = AGENDA_CONFIG.namaInstansi + ' · ADMINISTRASI';
+    
+    // 2. STRUKTUR DATA — dipertahankan agar kompatibel dengan Android.
+    const fields = ['nomorBerkas', 'alamatPenerima', 'tanggal', 'perihal', 'pengirim', 'keterangan'];
+    const labels = ['Nomor Berkas', 'Alamat Penerima', 'Tanggal', 'Perihal', 'Pengirim', 'Keterangan'];
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    } [c]));
+    
+    function localGet(k, fallback) {
+      try {
+        return JSON.parse(localStorage.getItem(k)) ?? fallback
+      } catch {
+        return fallback
+      }
+    }
+    let kind = 'keluar',
+      data = [],
+      filtered = [],
+      page = 0,
+      ready = false,
+      unsub, editId = null,
+      deleteTarget = null,
+      busy = false,
+      api, db, toastTimer;
+    
+    
+    // 3. FUNGSI BANTU — tanggal, nomor berkas, CSV, dan pesan.
+    function time(v) {
+      const n = Number(v);
+      return n && Number.isFinite(n) ? new Date(n).toLocaleString('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        dateStyle: 'short',
+        timeStyle: 'short'
+      }) + ' WIB' : ''
+    }
+    
+    function nextNumber(rows, type) {
+      const m = rows.reduce((a, d) => /^\d+$/.test(String(d.nomorBerkas)) ? Math.max(a, Number(d.nomorBerkas)) : a, 0);
+      return type === 'keluar' ? String(m + 1).padStart(3, '0') : String(m + 1)
+    }
+    const toStored = s => s.split('-').reverse().join('-');
+    
+    function toInput(s) {
+      return /^\d{2}-\d{2}-\d{4}$/.test(s) ? s.split('-').reverse().join('-') : s
+    }
+    
+    function csvCell(v) {
+      let s = String(v ?? '');
+      if (/^[\s]*[=+\-@]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g, '""') + '"'
+    }
+    
+    function message(s) {
+      const toast = $('toast');
+      toast.textContent = s;
+      toast.hidden = !s;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.hidden = true;
+        toast.textContent = '';
+      }, 6000);
+    }
+    
+    function problem(e) {
+      const code = e?.code || '';
+      if (code.includes('permission-denied')) return 'Akses Firestore ditolak. Periksa Rules dan App Check proyek Firebase. Hubungi pengelola agenda.';
+      if (code.includes('unavailable')) return 'Database tidak dapat dihubungi. Periksa internet, lalu muat ulang halaman.';
+      return 'Operasi gagal: ' + (e?.message || String(e))
+    }
+    
+    function notice(s = '') {
+      $('notice').textContent = s;
+      $('notice').hidden = !s
+    }
+    
+    function setReady(v) {
+      ready = v;
+      $('add').disabled = !v;
+      $('csv').disabled = !v || !filtered.length
+    }
+    
+    // 4. DAFTAR SURAT — pencarian dan pembagian halaman (50 baris).
+    function render() {
+      const q = $('search').value.toLocaleLowerCase('id');
+      filtered = data.filter(d => [...fields.map(f => d[f]), time(d.timestamp)].some(v => String(v ?? '').toLocaleLowerCase('id').includes(q)));
+      const pages = Math.max(1, Math.ceil(filtered.length / 50));
+      page = Math.min(page, pages - 1);
+      $('count').textContent = data.length + ' surat';
+      $('page').textContent = (page + 1) + ' / ' + pages;
+      $('prev').disabled = page === 0;
+      $('next').disabled = page >= pages - 1;
+      $('csv').disabled = !ready || !filtered.length;
+      $('summary').textContent = filtered.length ? `${page*50+1}–${Math.min((page+1)*50,filtered.length)} dari ${filtered.length} hasil` : '0 hasil';
+      $('empty').hidden = filtered.length > 0;
+      $('empty').textContent = ready ? (data.length ? 'Tidak ada surat sesuai pencarian.' : 'Belum ada surat. Tambahkan surat pertama Anda.') : 'Data belum tersedia. Periksa status koneksi.';
+      $('rows').innerHTML = filtered.slice(page * 50, (page + 1) * 50).map(d => `<tr><td><b>${esc(d.nomorBerkas)}</b></td><td>${esc(d.tanggal)}</td><td>${esc(d.alamatPenerima)}</td><td>${esc(d.perihal)}</td><td>${esc(d.pengirim)}</td><td>${esc(d.keterangan)}</td><td>${esc(time(d.timestamp))}</td><td class="actions"><button data-action="view" data-id="${esc(d.id)}">Lihat</button> <button disabled data-action="edit" data-id="${esc(d.id)}">Edit</button> <button disabled class="danger" data-action="delete" data-id="${esc(d.id)}">Hapus</button></td></tr>`).join('')
+     
+    }
+    
+    // 5. KONEKSI FIRESTORE — pembaruan data otomatis dari server.
+    function subscribe() {
+      unsub?.();
+      data = [];
+      page = 0;
+      setReady(false);
+      render();
+      notice();
+      $('status').textContent = 'Menghubungkan ke database…';
+      const selected = kind;
+      unsub = api.onSnapshot(api.collection(db, collectionName(selected)), {
+        includeMetadataChanges: true
+      }, snap => {
+        if (selected !== kind) return;
+        data = snap.docs.map(d => ({
+          ...d.data(),
+          id: d.id
+        })).sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0));
+        setReady(!snap.metadata.fromCache && navigator.onLine);
+        $('status').textContent = ready ? '● Terhubung · data diperbarui otomatis' : '○ Menunggu koneksi server · perubahan dinonaktifkan';
+        render()
+      }, e => {
+        setReady(false);
+        $('status').textContent = '● Koneksi gagal';
+        notice(problem(e));
+        render()
+      })
+    }
+    
+    // 6. FORMULIR TAMBAH / EDIT — edit tidak mengubah timestamp asli.
+    function openEditor(d = null) {
+      if (!ready || busy) return;
+      editId = d?.id || null;
+      $('form').reset();
+      $('formerror').textContent = '';
+      $('formtitle').textContent = (d ? 'Edit' : 'Tambah') + ' Surat ' + (kind === 'keluar' ? 'Keluar' : 'Masuk');
+      for (const f of fields) $('form').elements[f].value = d?.[f] ?? '';
+      if (!d) {
+        $('form').elements.nomorBerkas.value = nextNumber(data, kind);
+        const now = new Date();
+        $('form').elements.tanggal.value = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-')
+      } else $('form').elements.tanggal.value = toInput(String(d.tanggal || ''));
+      const addresses = [...new Set([...localGet(ADDRESS_STORAGE_KEY, []), ...data.map(d => d.alamatPenerima)].filter(Boolean))];
+      $('addresses').innerHTML = addresses.map(a => `<option value="${esc(a)}"></option>`).join('');
+      $('editor').showModal()
+    }
+    $('form').onsubmit = async e => {
+      e.preventDefault();
+      if (busy || !ready || !navigator.onLine) {
+        $('formerror').textContent = 'Tunggu koneksi server sebelum menyimpan.';
+        return
+      }
+      const payload = {};
+      for (const f of fields) {
+        payload[f] = $('form').elements[f].value.trim();
+        if (!payload[f]) {
+          $('formerror').textContent = 'Semua kolom wajib diisi.';
+          return
+        }
+      }
+      payload.tanggal = toStored(payload.tanggal);
+      if (kind === 'keluar' && !editId && /^\d+$/.test(payload.nomorBerkas)) payload.nomorBerkas = String(Number(payload.nomorBerkas)).padStart(3, '0');
+      const same = data.some(d => d.id !== editId && d.nomorBerkas === payload.nomorBerkas);
+      if (same) {
+        $('formerror').textContent = 'Nomor berkas ini sudah digunakan. Periksa atau ganti nomor.';
+        return
+      }
+      busy = true;
+      $('save').disabled = true;
+      $('cancel').disabled = true;
+      $('formerror').textContent = 'Menyimpan ke server…';
+      try {
+        if (editId) await api.updateDoc(api.doc(db, collectionName(kind), editId), payload);
+        else await api.addDoc(api.collection(db, collectionName(kind)), {
+          ...payload,
+          timestamp: Date.now()
+        });
+        try {
+          localStorage.setItem(ADDRESS_STORAGE_KEY, JSON.stringify([...new Set([...localGet(ADDRESS_STORAGE_KEY, []), payload.alamatPenerima])]))
+        } catch {}
+        $('editor').close();
+        message(editId ? 'Surat berhasil diperbarui.' : 'Surat berhasil disimpan.')
+      } catch (e) {
+        $('formerror').textContent = problem(e)
+      } finally {
+        busy = false;
+        $('save').disabled = false;
+        $('cancel').disabled = false
+      }
+    };
+    
+    // 7. TINDAKAN BARIS — detail, edit, dan konfirmasi hapus.
+    $('rows').onclick = e => {
+      const b = e.target.closest('button[data-action]');
+      if (!b || busy) return;
+      const d = data.find(d => d.id === b.dataset.id);
+      if (!d) return;
+      if (b.dataset.action === 'edit') return openEditor(d);
+      if (b.dataset.action === 'view') {
+        $('detailbody').innerHTML = fields.map((f, i) => `<dt>${labels[i]}</dt><dd>${esc(d[f])}</dd>`).join('') + `<dt>Waktu Input</dt><dd>${esc(time(d.timestamp))}</dd>`;
+        $('detail').showModal()
+      } else if (ready) {
+        deleteTarget = {
+          id: d.id,
+          kind
+        };
+        $('deleteinfo').textContent = `Berkas ${d.nomorBerkas} — ${d.perihal}`;
+        $('deleteerror').textContent = '';
+        $('deletion').showModal()
+      }
+    };
+    $('confirmdelete').onclick = async () => {
+      if (!deleteTarget || busy || !ready || !navigator.onLine) return;
+      busy = true;
+      $('confirmdelete').disabled = true;
+      try {
+        await api.deleteDoc(api.doc(db, collectionName(deleteTarget.kind), deleteTarget.id));
+        $('deletion').close();
+        deleteTarget = null;
+        message('Surat berhasil dihapus.')
+      } catch (e) {
+        $('deleteerror').textContent = problem(e)
+      } finally {
+        busy = false;
+        $('confirmdelete').disabled = false
+      }
+    };
+    for (const el of document.querySelectorAll('[data-close]')) el.onclick = () => {
+      if (!busy) $(el.dataset.close).close()
+    };
+    for (const d of document.querySelectorAll('dialog')) d.addEventListener('cancel', e => {
+      if (busy) e.preventDefault()
+    });
+    $('cancel').onclick = () => {
+      if (!busy) $('editor').close()
+    };
+    $('add').onclick = () => openEditor();
+    for (const b of document.querySelectorAll('[data-kind]')) b.onclick = () => {
+      if (kind === b.dataset.kind || busy) return;
+      kind = b.dataset.kind;
+      $('title').textContent = 'Agenda Surat ' + (kind === 'keluar' ? 'Keluar' : 'Masuk');
+      for (const t of document.querySelectorAll('[data-kind]')) t.setAttribute('aria-selected', String(t === b));
+      $('search').value = '';
+      if (db) subscribe()
+    };
+    $('search').oninput = () => {
+      page = 0;
+      render()
+    };
+    $('prev').onclick = () => {
+      page--;
+      render()
+    };
+    $('next').onclick = () => {
+      page++;
+      render()
+    };
+    $('print').onclick = () => window.print();
+    
+    // 8. EKSPOR CSV — seluruh hasil pencarian.
+    $('csv').onclick = () => {
+      if (!ready || !filtered.length) return;
+      const header = ['No', 'Berkas', 'Penerima', 'Tanggal', 'Perihal', 'Pengirim', 'Keterangan', 'WaktuInput'];
+      const lines = [header, ...filtered.map((d, i) => [i + 1, d.nomorBerkas, d.alamatPenerima, d.tanggal, d.perihal, d.pengirim, d.keterangan, time(d.timestamp)])];
+      const blob = new Blob(['\ufeff' + lines.map(r => r.map(csvCell).join(',')).join('\r\n')], {
+        type: 'text/csv;charset=utf-8'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `surat_${kind}_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    };
+    window.addEventListener('offline', () => {
+      setReady(false);
+      $('status').textContent = '○ Offline · tunggu internet untuk mengubah data'
+    });
+    window.addEventListener('online', () => {
+      if (db && !busy) subscribe()
+    });
+    
+    // 9. MULAI APLIKASI — SDK Firebase dimuat dari CDN resmi.
+    try {
+      const [app, firestore] = await Promise.all([import('https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js'), import('https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js')]);
+      api = firestore;
+      db = api.getFirestore(app.initializeApp(config));
+      subscribe()
+    } catch (e) {
+      $('status').textContent = '● Koneksi gagal';
+      notice(problem(e) + '\nJika modul Firebase gagal dimuat, periksa internet atau pemblokir jaringan lalu muat ulang.');
+      render()
+    }
+  </script>
+ </body>
+</html>
