@@ -682,8 +682,12 @@
     }
     
     function nextNumber(rows, type) {
-      const m = rows.reduce((a, d) => /^\d+$/.test(String(d.nomorBerkas)) ? Math.max(a, Number(d.nomorBerkas)) : a, 0);
-      return type === 'keluar' ? String(m + 1).padStart(3, '0') : String(m + 1)
+      // Data sudah diurutkan dari timestamp terbaru pada subscribe().
+      // Ambil nomor numerik pada surat TERBARU, bukan nomor terbesar sepanjang sejarah.
+      const latest = [...rows].sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0))
+        .find(d => /^\d+$/.test(String(d.nomorBerkas ?? '').trim()));
+      const next = (latest ? Number(latest.nomorBerkas) : 0) + 1;
+      return type === 'keluar' ? String(next).padStart(3, '0') : String(next);
     }
     const toStored = s => s.split('-').reverse().join('-');
     
@@ -806,11 +810,8 @@
       }
       payload.tanggal = toStored(payload.tanggal);
       if (kind === 'keluar' && !editId && /^\d+$/.test(payload.nomorBerkas)) payload.nomorBerkas = String(Number(payload.nomorBerkas)).padStart(3, '0');
-      const same = data.some(d => d.id !== editId && d.nomorBerkas === payload.nomorBerkas);
-      if (same) {
-        $('formerror').textContent = 'Nomor berkas ini sudah digunakan. Periksa atau ganti nomor.';
-        return
-      }
+      // Nomor manual diperbolehkan, termasuk jika sudah ada pada arsip.
+      // Konsisten dengan perilaku input manual aplikasi Android.
       busy = true;
       $('save').disabled = true;
       $('cancel').disabled = true;
